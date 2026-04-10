@@ -1,0 +1,54 @@
+# =============================================================================
+# NLE Video Editor — Multi-stage Docker Build
+# =============================================================================
+# Stage 1: Build Angular frontend + compile Electron
+# Stage 2: Slim output image with only artifacts
+# =============================================================================
+
+# --- Stage 1: Build ---
+FROM node:22-bookworm AS builder
+
+# System dependencies for Electron build tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 \
+    make \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy package files first (cache layer)
+COPY package.json package-lock.json* ./
+
+# Install dependencies
+RUN npm ci --legacy-peer-deps
+
+# Copy source code
+COPY . .
+
+# Build Angular for production
+RUN npm run build
+
+# Build Electron distributables (Linux)
+RUN npx electron-builder --linux --dir \
+    --config.electronDownload.cache=/tmp/electron-cache
+
+# --- Stage 2: Output artifacts ---
+FROM alpine:3.19 AS output
+
+WORKDIR /artifacts
+
+# Copy built Angular app
+COPY --from=builder /app/dist/renderer ./renderer/
+
+# Copy Electron distributables
+COPY --from=builder /app/release/ ./release/
+
+# Copy Electron main process files
+COPY --from=builder /app/electron/ ./electron/
+
+# Metadata
+LABEL maintainer="NLE Video Editor"
+LABEL description="Production build artifacts for NLE Video Editor"
+
+CMD ["echo", "Build artifacts are in /artifacts"]

@@ -1,0 +1,29 @@
+<div class="editor-layout">
+  <!-- Top Toolbar -->
+  <app-toolbar class="editor-toolbar" />
+
+  <!-- Main Content Area -->
+  <div class="editor-main">
+    <!-- Video Preview (center) -->
+    <div class="editor-preview-panel panel">
+      <div class="panel-header">
+        <span>Preview</span>
+      </div>
+      <app-video-preview />
+    </div>
+
+    <!-- Properties Panel (right sidebar) -->
+    <app-properties-panel class="editor-properties" />
+  </div>
+
+  <!-- Timeline (bottom) -->
+  <div class="editor-timeline-panel">
+    <app-timeline />
+  </div>
+
+  <!-- AI Copilot Prompt Bar (very bottom) -->
+  <app-prompt-bar class="editor-prompt-bar" />
+</div>
+
+<!-- Export Dialog (modal overlay) -->
+<app-export-dialog />

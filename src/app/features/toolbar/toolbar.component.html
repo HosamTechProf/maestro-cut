@@ -1,0 +1,82 @@
+<div class="toolbar">
+  <!-- Left: Project name + file actions -->
+  <div class="toolbar-section">
+    <img src="logo.png" alt="MaestroCut" class="toolbar-logo" style="width: 24px; height: 24px; border-radius: 4px;" />
+    <span class="toolbar-project-name">
+      {{ projectName() }}
+      @if (isDirty()) {
+        <span class="dirty-indicator" data-tooltip="Unsaved changes">●</span>
+      }
+    </span>
+  </div>
+
+  <!-- Center: Edit tools -->
+  <div class="toolbar-section toolbar-center">
+    <!-- Undo / Redo -->
+    <button
+      class="btn-icon"
+      [disabled]="!canUndo()"
+      (click)="onUndo()"
+      [attr.data-tooltip]="canUndo() ? 'Undo: ' + undoDesc() : 'Nothing to undo'">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+      </svg>
+    </button>
+    <button
+      class="btn-icon"
+      [disabled]="!canRedo()"
+      (click)="onRedo()"
+      [attr.data-tooltip]="canRedo() ? 'Redo: ' + redoDesc() : 'Nothing to redo'">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+      </svg>
+    </button>
+
+    <div class="toolbar-divider"></div>
+
+    <!-- Split -->
+    <button class="btn-icon" (click)="onSplit()" data-tooltip="Split at playhead (S)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="12" y1="2" x2="12" y2="22"/><polyline points="8 6 12 2 16 6"/><polyline points="8 18 12 22 16 18"/>
+      </svg>
+    </button>
+
+    <!-- Delete -->
+    <button class="btn-icon" (click)="onDeleteSelected()" data-tooltip="Delete selected (Del)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+      </svg>
+    </button>
+
+    <div class="toolbar-divider"></div>
+
+    <!-- Snap toggle -->
+    <button
+      class="btn-icon"
+      [class.active]="snapEnabled()"
+      (click)="onToggleSnap()"
+      [attr.data-tooltip]="snapEnabled() ? 'Snap: ON' : 'Snap: OFF'">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 14H3M21 10H3M12 3v18"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Right: Zoom -->
+  <div class="toolbar-section toolbar-right">
+    <span class="toolbar-zoom-label text-mono text-muted">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+    </span>
+    <input
+      type="range"
+      class="toolbar-zoom-slider"
+      min="10"
+      max="300"
+      [value]="zoom()"
+      (input)="onZoomChange($event)"
+    />
+    <span class="toolbar-zoom-value text-mono text-muted">{{ zoom() }}px/s</span>
+  </div>
+</div>

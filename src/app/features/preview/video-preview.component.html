@@ -1,0 +1,95 @@
+<div class="preview-container">
+  <!-- Video Canvas -->
+  <div class="preview-viewport">
+    @if (hasAnyClip()) {
+      <!-- Video element stays mounted to avoid reload on every scrub -->
+      <video
+        #videoPlayer
+        class="preview-video"
+        [style.filter]="cssFilterString()"
+        [style.opacity]="clipOpacity()"
+        preload="auto"
+        playsinline
+      ></video>
+
+      <!-- Dim overlay when playhead is outside any clip -->
+      @if (!activeClip()) {
+        <div class="preview-gap-overlay">
+          <span class="text-muted">No clip at playhead</span>
+        </div>
+      }
+    } @else {
+      <div class="preview-empty">
+        <div class="preview-empty-icon">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+        </div>
+        <p class="preview-empty-text">Import a video to get started</p>
+        <p class="preview-empty-hint">Drag & drop files or use File → Open</p>
+      </div>
+    }
+  </div>
+
+  <!-- Transport Controls (always visible) -->
+  <div class="preview-controls">
+    <!-- Mini timeline bar -->
+    <div class="preview-progress-bar" (click)="onTimelineBarClick($event)">
+      <div
+        class="preview-progress-fill"
+        [style.width.%]="stateService.totalDuration() > 0
+          ? (stateService.currentTime() / stateService.totalDuration()) * 100
+          : 0"
+      ></div>
+    </div>
+
+    <div class="preview-controls-row">
+      <!-- Time display -->
+      <span class="preview-timecode text-mono">
+        {{ stateService.currentTime() | timeFormat:'frames' }}
+        <span class="text-muted"> / </span>
+        {{ stateService.totalDuration() | timeFormat:'frames' }}
+      </span>
+
+      <!-- Play controls -->
+      <div class="preview-transport">
+        <button class="btn-icon" (click)="playbackService.jumpToStart()" data-tooltip="Jump to start">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+          </svg>
+        </button>
+        <button class="btn-icon" (click)="playbackService.stepFrame(-1)" data-tooltip="Previous frame">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+          </svg>
+        </button>
+        <button class="btn-icon play-btn" (click)="onPlayPause()" [attr.data-tooltip]="stateService.isPlaying() ? 'Pause' : 'Play'">
+          @if (stateService.isPlaying()) {
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M6 4h4v16H6zM14 4h4v16h-4z"/>
+            </svg>
+          } @else {
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="5 3 19 12 5 21 5 3"/>
+            </svg>
+          }
+        </button>
+        <button class="btn-icon" (click)="playbackService.stepFrame(1)" data-tooltip="Next frame">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="transform: scaleX(-1)">
+            <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+          </svg>
+        </button>
+        <button class="btn-icon" (click)="playbackService.jumpToEnd()" data-tooltip="Jump to end">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="transform: scaleX(-1)">
+            <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- FPS display -->
+      <span class="preview-fps text-mono text-muted">
+        {{ playbackService.currentFps() }} FPS
+      </span>
+    </div>
+  </div>
+</div>

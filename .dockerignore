@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+
+# Build outputs (rebuilt inside Docker)
+dist/
+release/
+build-output/
+
+# Environment files (secrets)
+.env
+.env.local
+
+# IDE / Editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Temp
+*.tmp
+thumbnails/
+
+# Test
+coverage/
+.nyc_output/
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Documentation / Non-essential
+README.md
+LICENSE
+*.md
+.gemini/

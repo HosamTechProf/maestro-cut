@@ -1,0 +1,43 @@
+<div class="prompt-bar">
+  <div class="prompt-bar-inner">
+    <!-- AI icon -->
+    <div class="prompt-icon" [class.processing]="isProcessing()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+      </svg>
+    </div>
+
+    <!-- Input -->
+    <input
+      class="prompt-input"
+      type="text"
+      placeholder="Ask AI to edit your timeline... (e.g., 'Trim the first 5 seconds')"
+      [value]="promptText()"
+      (input)="promptText.set($any($event.target).value)"
+      (keydown)="onKeyDown($event)"
+      [disabled]="isProcessing()"
+    />
+
+    <!-- Submit button -->
+    <button
+      class="prompt-submit btn-icon"
+      (click)="onSubmit()"
+      [disabled]="isProcessing() || !promptText().trim()"
+      data-tooltip="Send to AI">
+      @if (isProcessing()) {
+        <div class="spinner"></div>
+      } @else {
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      }
+    </button>
+  </div>
+
+  <!-- Last response -->
+  @if (lastResponse()) {
+    <div class="prompt-response text-sm animate-slide-up">
+      {{ lastResponse() }}
+    </div>
+  }
+</div>

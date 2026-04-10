@@ -1,0 +1,150 @@
+@if (hasSelection()) {
+  <div class="props-panel">
+    <div class="panel-header">
+      <span>Properties</span>
+    </div>
+
+    <div class="props-body">
+      @if (clip(); as c) {
+        <!-- Clip name -->
+        <div class="prop-section">
+          <span class="prop-clip-name truncate">{{ c.fileName }}</span>
+        </div>
+
+        <!-- Timing -->
+        <div class="prop-section">
+          <h4 class="prop-section-title">Timing</h4>
+          <div class="prop-row">
+            <label class="prop-label">In Point</label>
+            <input
+              class="input prop-input text-mono"
+              type="number"
+              step="0.1"
+              min="0"
+              [max]="c.outPoint"
+              [value]="c.inPoint"
+              (change)="onTrimIn($event)"
+            />
+          </div>
+          <div class="prop-row">
+            <label class="prop-label">Out Point</label>
+            <input
+              class="input prop-input text-mono"
+              type="number"
+              step="0.1"
+              [min]="c.inPoint"
+              [max]="c.duration"
+              [value]="c.outPoint"
+              (change)="onTrimOut($event)"
+            />
+          </div>
+        </div>
+
+        <!-- Audio -->
+        <div class="prop-section">
+          <h4 class="prop-section-title">Audio</h4>
+          <div class="prop-row">
+            <label class="prop-label">Volume</label>
+            <div class="prop-slider-row">
+              <input
+                type="range"
+                min="0" max="100"
+                [value]="c.volume * 100"
+                (input)="onVolumeChange($event)"
+              />
+              <span class="prop-value text-mono">{{ (c.volume * 100) | number:'1.0-0' }}%</span>
+            </div>
+          </div>
+          <div class="prop-row">
+            <button
+              class="btn btn-ghost prop-toggle-btn"
+              [class.active]="c.isMuted"
+              (click)="onToggleMute()">
+              {{ c.isMuted ? '🔇 Muted' : '🔊 Unmuted' }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Visual -->
+        <div class="prop-section">
+          <h4 class="prop-section-title">Visual</h4>
+          <div class="prop-row">
+            <label class="prop-label">Opacity</label>
+            <div class="prop-slider-row">
+              <input
+                type="range"
+                min="0" max="100"
+                [value]="c.opacity * 100"
+                (input)="onOpacityChange($event)"
+              />
+              <span class="prop-value text-mono">{{ (c.opacity * 100) | number:'1.0-0' }}%</span>
+            </div>
+          </div>
+          <div class="prop-row">
+            <label class="prop-label">Speed</label>
+            <select class="input prop-select" [value]="c.playbackRate" (change)="onSpeedChange($event)">
+              <option [value]="0.25">0.25x</option>
+              <option [value]="0.5">0.5x</option>
+              <option [value]="0.75">0.75x</option>
+              <option [value]="1">1x (Normal)</option>
+              <option [value]="1.25">1.25x</option>
+              <option [value]="1.5">1.5x</option>
+              <option [value]="2">2x</option>
+              <option [value]="4">4x</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="prop-section">
+          <h4 class="prop-section-title">Filters</h4>
+          @for (filter of c.filters; track filter.id) {
+            <div class="prop-filter-container">
+              <div class="prop-filter-item">
+                <span class="prop-filter-name" style="text-transform: capitalize;">{{ filter.type }}</span>
+                <button class="btn-icon prop-filter-remove" (click)="onRemoveFilter(filter.id)">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+              <div class="prop-filter-params" style="padding-left: 10px; margin-bottom: 10px;">
+                @for (paramKey of getFilterParamKeys(filter.type); track paramKey) {
+                  @if (getFilterRanges(filter.type)[paramKey]; as range) {
+                    <div class="prop-row" style="margin-top: 4px;">
+                      <label class="prop-label" style="text-transform: capitalize; font-size: 11px;">{{ paramKey }}</label>
+                      <div class="prop-slider-row">
+                        <input
+                          type="range"
+                          [min]="range.min" [max]="range.max" [step]="range.step"
+                          [value]="filter.params[paramKey]"
+                          (input)="onFilterParamChange(filter.id, paramKey, $event)"
+                        />
+                        <span class="prop-value text-mono" style="font-size: 10px;">{{ filter.params[paramKey] | number:'1.0-2' }}</span>
+                      </div>
+                    </div>
+                  }
+                }
+              </div>
+            </div>
+          }
+          <select class="input prop-select" (change)="onAddFilter($event)">
+            <option value="">+ Add Filter...</option>
+            @for (ft of filterTypes; track ft) {
+              <option [value]="ft">{{ ft }}</option>
+            }
+          </select>
+        </div>
+      }
+    </div>
+  </div>
+} @else {
+  <div class="props-panel props-empty">
+    <div class="panel-header">
+      <span>Properties</span>
+    </div>
+    <div class="props-empty-body">
+      <p class="text-muted">Select a clip to edit properties</p>
+    </div>
+  </div>
+}

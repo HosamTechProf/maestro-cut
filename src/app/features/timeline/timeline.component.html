@@ -1,0 +1,135 @@
+<div class="timeline-container">
+  <!-- Track Headers (left sidebar) -->
+  <div class="track-headers">
+    <div class="ruler-corner"></div>
+    @for (track of tracks(); track track.id) {
+      <div
+        class="track-header"
+        [style.height.px]="track.height"
+        [class.muted]="track.isMuted"
+        [class.locked]="track.isLocked">
+        <span class="track-name truncate">{{ track.name }}</span>
+        <div class="track-controls">
+          <button
+            class="track-btn"
+            [class.active]="track.isMuted"
+            (click)="onToggleTrackMute(track.id)"
+            [attr.data-tooltip]="track.isMuted ? 'Unmute' : 'Mute'">
+            @if (track.isMuted) {
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/>
+              </svg>
+            } @else {
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+              </svg>
+            }
+          </button>
+          <button
+            class="track-btn"
+            [class.active]="track.isLocked"
+            (click)="onToggleTrackLock(track.id)"
+            [attr.data-tooltip]="track.isLocked ? 'Unlock' : 'Lock'">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              @if (track.isLocked) {
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              } @else {
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>
+              }
+            </svg>
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+
+  <!-- Scrollable timeline area -->
+  <div class="timeline-scroll" #timelineArea>
+    <!-- Ruler -->
+    <div class="timeline-ruler" (mousedown)="onRulerMouseDown($event)" [style.width.px]="timelineWidth()">
+      @for (marker of rulerMarkers(); track marker.time) {
+        <div
+          class="ruler-mark"
+          [class.major]="marker.major"
+          [style.left.px]="marker.x">
+          @if (marker.label) {
+            <span class="ruler-label text-mono">{{ marker.label }}</span>
+          }
+        </div>
+      }
+      <!-- Playhead on ruler -->
+      <div class="ruler-playhead" [style.left.px]="playheadX()"></div>
+    </div>
+
+    <!-- Track lanes + clips -->
+    <div
+      class="timeline-tracks"
+      [style.width.px]="timelineWidth()"
+      [style.height.px]="totalTracksHeight()"
+      (click)="onTimelineClick($event)">
+
+      <!-- Track lane backgrounds -->
+      @for (track of tracks(); track track.id) {
+        <div
+          class="track-lane"
+          [style.top.px]="getTrackTop(track)"
+          [style.height.px]="track.height"
+          [class.even]="track.index % 2 === 0">
+        </div>
+      }
+
+      <!-- Clip blocks -->
+      @for (clip of clips(); track clip.id) {
+        <div
+          class="clip-block"
+          cdkDrag
+          cdkDragLockAxis="x"
+          [cdkDragFreeDragPosition]="{x: 0, y: 0}"
+          (cdkDragEnded)="onClipDragEnded($event, clip)"
+          (click)="onClipClick($event, clip)"
+          [style.left.px]="getClipLeft(clip)"
+          [style.top.px]="getClipTop(clip)"
+          [style.width.px]="getClipWidth(clip)"
+          [style.height.px]="getClipHeight(clip)"
+          [style.--clip-color]="clip.color"
+          [class.selected]="isClipSelected(clip)">
+
+          <!-- Left trim handle -->
+          <div
+            class="trim-handle trim-handle-left"
+            cdkDrag
+            cdkDragLockAxis="x"
+            (cdkDragEnded)="onLeftTrimEnd($event, clip)"
+            (click)="$event.stopPropagation()">
+          </div>
+
+          <!-- Clip content -->
+          <div class="clip-content">
+            <span class="clip-label truncate">{{ clip.fileName }}</span>
+            @if (clip.isMuted) {
+              <span class="clip-badge muted-badge">M</span>
+            }
+            @if (clip.filters.length > 0) {
+              <span class="clip-badge filter-badge">FX</span>
+            }
+          </div>
+
+          <!-- Right trim handle -->
+          <div
+            class="trim-handle trim-handle-right"
+            cdkDrag
+            cdkDragLockAxis="x"
+            (cdkDragEnded)="onRightTrimEnd($event, clip)"
+            (click)="$event.stopPropagation()">
+          </div>
+        </div>
+      }
+
+      <!-- Playhead line -->
+      <div class="playhead" [style.left.px]="playheadX()">
+        <div class="playhead-head"></div>
+        <div class="playhead-line"></div>
+      </div>
+    </div>
+  </div>
+</div>
