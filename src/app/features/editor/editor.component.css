@@ -4,7 +4,7 @@
 
 .editor-layout {
   display: grid;
-  grid-template-rows: var(--toolbar-height) 1fr 280px var(--prompt-bar-height);
+  grid-template-rows: var(--toolbar-height) 1fr 280px auto;
   width: 100vw;
   height: 100vh;
   overflow: hidden;

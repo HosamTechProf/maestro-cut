@@ -36,8 +36,40 @@
 
   <!-- Last response -->
   @if (lastResponse()) {
-    <div class="prompt-response text-sm animate-slide-up">
-      {{ lastResponse() }}
+    <div class="prompt-response text-sm animate-slide-up" [class.error]="lastResponse()?.isError">
+      <div class="response-header">
+        @if (lastResponse()?.isError) {
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          <span class="font-bold text-red-400">AI Error</span>
+        } @else {
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+          </svg>
+          <span class="font-bold text-green-400">AI Confirmed</span>
+        }
+        
+        <button class="close-btn" (click)="closeResponse()" title="Dismiss">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      
+      <p class="response-explanation">{{ lastResponse()?.explanation }}</p>
+      
+      @if (lastResponse()!.actions.length > 0) {
+        <div class="response-actions">
+          <span class="muted-label">Executed Actions:</span>
+          <div class="action-badges">
+            @for (action of lastResponse()!.actions; track $index) {
+              <span class="action-badge bg-glass border-glass">{{ action }}</span>
+            }
+          </div>
+        </div>
+      }
     </div>
   }
 </div>

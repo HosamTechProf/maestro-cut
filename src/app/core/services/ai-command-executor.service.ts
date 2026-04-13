@@ -26,16 +26,20 @@ export class AiCommandExecutorService {
 
   /**
    * Execute a list of AI commands as a single undoable batch.
-   * Returns the number of commands successfully executed.
+   * Returns information about the execution, including affected clip IDs.
    */
-  executeCommands(aiCommands: readonly AiEditCommand[], explanation: string): number {
+  executeCommands(aiCommands: readonly AiEditCommand[], explanation: string): { count: number, affectedClipIds: string[] } {
     const editCommands: EditCommand[] = [];
+    const affectedClipIds = new Set<string>();
 
     for (const aiCmd of aiCommands) {
       try {
         const editCmd = this.convertCommand(aiCmd);
         if (editCmd) {
           editCommands.push(editCmd);
+          if ('clipId' in aiCmd && aiCmd.clipId) {
+            affectedClipIds.add(aiCmd.clipId as string);
+          }
         }
       } catch (err) {
         console.warn(`[AiCommandExecutor] Failed to convert command:`, aiCmd, err);
@@ -49,7 +53,10 @@ export class AiCommandExecutorService {
       );
     }
 
-    return editCommands.length;
+    return { 
+      count: editCommands.length, 
+      affectedClipIds: Array.from(affectedClipIds) 
+    };
   }
 
   /**

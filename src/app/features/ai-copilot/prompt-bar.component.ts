@@ -5,6 +5,13 @@ import { DesktopBridgeService } from '../../core/services/desktop-bridge.service
 import { AiCommandExecutorService } from '../../core/services/ai-command-executor.service';
 import type { AiEditCommand } from '../../core/models/ai-command.model';
 
+interface AiResponseDisplay {
+  explanation: string;
+  actionCount: number;
+  actions: string[];
+  isError: boolean;
+}
+
 @Component({
   selector: 'app-prompt-bar',
   standalone: true,
@@ -19,14 +26,14 @@ export class PromptBarComponent {
 
   promptText = signal('');
   isProcessing = signal(false);
-  lastResponse = signal('');
+  lastResponse = signal<AiResponseDisplay | null>(null);
 
   async onSubmit(): Promise<void> {
     const text = this.promptText().trim();
     if (!text || this.isProcessing()) return;
 
     this.isProcessing.set(true);
-    this.lastResponse.set('');
+    this.lastResponse.set(null);
 
     try {
       // Build context from current state
@@ -56,18 +63,42 @@ export class PromptBarComponent {
 
       // Execute the AI commands on the timeline
       if (response.commands && response.commands.length > 0) {
-        const executed = this.aiExecutor.executeCommands(
+        const { count, affectedClipIds } = this.aiExecutor.executeCommands(
           response.commands as AiEditCommand[],
           response.explanation,
         );
-        this.lastResponse.set(
-          `${response.explanation} (${executed} action${executed !== 1 ? 's' : ''} applied)`,
-        );
+        
+        // Highlight the affected clips purely for interaction!
+        if (affectedClipIds.length > 0) {
+          this.stateService.deselectAll();
+          this.stateService.selectClips(affectedClipIds);
+        }
+
+        this.lastResponse.set({
+          explanation: response.explanation,
+          actionCount: count,
+          actions: response.commands.map((c: any) => c.action),
+          isError: false
+        });
       } else {
-        this.lastResponse.set(response.explanation);
+        const isErrorMsg = response.explanation.toLowerCase().includes('error') || 
+                           response.explanation.toLowerCase().includes('demand') ||
+                           response.explanation.toLowerCase().includes('failed');
+                           
+        this.lastResponse.set({
+          explanation: response.explanation,
+          actionCount: 0,
+          actions: [],
+          isError: isErrorMsg
+        });
       }
     } catch (err: any) {
-      this.lastResponse.set(`Error: ${err?.message ?? 'Unknown error'}`);
+      this.lastResponse.set({
+        explanation: err?.message ?? 'Unknown error',
+        actionCount: 0,
+        actions: [],
+        isError: true
+      });
     } finally {
       this.isProcessing.set(false);
       this.promptText.set('');
@@ -79,5 +110,9 @@ export class PromptBarComponent {
       event.preventDefault();
       this.onSubmit();
     }
+  }
+
+  closeResponse(): void {
+    this.lastResponse.set(null);
   }
 }
