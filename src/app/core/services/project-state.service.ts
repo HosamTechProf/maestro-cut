@@ -311,7 +311,7 @@ export class ProjectStateService {
 
   /** Set timeline zoom level. */
   setZoom(zoom: number): void {
-    this._state.update((s) => ({ ...s, zoom: Math.max(5, Math.min(500, zoom)) }));
+    this._state.update((s) => ({ ...s, zoom: Math.max(1, Math.min(600, zoom)) }));
   }
 
   /** Set timeline scroll offsets. */

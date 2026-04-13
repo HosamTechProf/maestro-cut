@@ -66,7 +66,7 @@
       class="timeline-tracks"
       [style.width.px]="timelineWidth()"
       [style.height.px]="totalTracksHeight()"
-      (click)="onTimelineClick($event)">
+      (mousedown)="onTimelineAreaMouseDown($event)">
 
       <!-- Track lane backgrounds -->
       @for (track of tracks(); track track.id) {
@@ -74,7 +74,9 @@
           class="track-lane"
           [style.top.px]="getTrackTop(track)"
           [style.height.px]="track.height"
-          [class.even]="track.index % 2 === 0">
+          [class.even]="track.index % 2 === 0"
+          [class.audio-track]="track.type === 'audio'">
+          <span class="track-lane-label">{{ track.name }}</span>
         </div>
       }
 
@@ -83,7 +85,6 @@
         <div
           class="clip-block"
           cdkDrag
-          cdkDragLockAxis="x"
           [cdkDragFreeDragPosition]="{x: 0, y: 0}"
           (cdkDragEnded)="onClipDragEnded($event, clip)"
           (click)="onClipClick($event, clip)"
@@ -100,18 +101,45 @@
             cdkDrag
             cdkDragLockAxis="x"
             (cdkDragEnded)="onLeftTrimEnd($event, clip)"
-            (click)="$event.stopPropagation()">
+            (click)="$event.stopPropagation()"
+            (mousedown)="$event.stopPropagation()">
+            <div class="trim-handle-grip"></div>
           </div>
 
           <!-- Clip content -->
           <div class="clip-content">
-            <span class="clip-label truncate">{{ clip.fileName }}</span>
-            @if (clip.isMuted) {
-              <span class="clip-badge muted-badge">M</span>
-            }
-            @if (clip.filters.length > 0) {
-              <span class="clip-badge filter-badge">FX</span>
-            }
+            <div class="clip-info">
+              <span class="clip-label truncate">{{ clip.fileName }}</span>
+              <span class="clip-duration text-mono">{{ getClipDurationLabel(clip) }}</span>
+            </div>
+            <div class="clip-badges">
+              @if (clip.isMuted) {
+                <span class="clip-badge muted-badge">M</span>
+              }
+              @if (clip.filters.length > 0) {
+                <span class="clip-badge filter-badge">FX</span>
+              }
+            </div>
+          </div>
+
+          <!-- Audio waveform visualization (simple bars) -->
+          <div class="clip-audio-wave">
+            <div class="wave-bar" style="height: 30%"></div>
+            <div class="wave-bar" style="height: 55%"></div>
+            <div class="wave-bar" style="height: 80%"></div>
+            <div class="wave-bar" style="height: 45%"></div>
+            <div class="wave-bar" style="height: 90%"></div>
+            <div class="wave-bar" style="height: 60%"></div>
+            <div class="wave-bar" style="height: 35%"></div>
+            <div class="wave-bar" style="height: 70%"></div>
+            <div class="wave-bar" style="height: 50%"></div>
+            <div class="wave-bar" style="height: 85%"></div>
+            <div class="wave-bar" style="height: 40%"></div>
+            <div class="wave-bar" style="height: 65%"></div>
+            <div class="wave-bar" style="height: 75%"></div>
+            <div class="wave-bar" style="height: 30%"></div>
+            <div class="wave-bar" style="height: 55%"></div>
+            <div class="wave-bar" style="height: 90%"></div>
           </div>
 
           <!-- Right trim handle -->
@@ -120,7 +148,9 @@
             cdkDrag
             cdkDragLockAxis="x"
             (cdkDragEnded)="onRightTrimEnd($event, clip)"
-            (click)="$event.stopPropagation()">
+            (click)="$event.stopPropagation()"
+            (mousedown)="$event.stopPropagation()">
+            <div class="trim-handle-grip"></div>
           </div>
         </div>
       }

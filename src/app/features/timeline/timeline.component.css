@@ -1,5 +1,5 @@
 /* =============================================================================
-   Timeline Styles
+   Timeline Styles — Responsive & Polished
    ============================================================================= */
 
 .timeline-container {
@@ -16,11 +16,13 @@
   background: var(--color-bg-surface);
   border-right: 1px solid var(--color-border);
   overflow: hidden;
+  z-index: 4;
 }
 
 .ruler-corner {
   height: 28px;
   border-bottom: 1px solid var(--color-border);
+  background: var(--color-timeline-ruler);
 }
 
 .track-header {
@@ -87,6 +89,7 @@
   position: sticky;
   top: 0;
   height: 28px;
+  min-width: 100%;
   background: var(--color-timeline-ruler);
   border-bottom: 1px solid var(--color-border);
   cursor: pointer;
@@ -131,6 +134,7 @@
 .timeline-tracks {
   position: relative;
   min-height: 100%;
+  min-width: 100%;
 }
 
 .track-lane {
@@ -142,7 +146,25 @@
 }
 
 .track-lane.even {
-  background: rgba(255, 255, 255, 0.01);
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.track-lane.audio-track {
+  background: rgba(34, 197, 94, 0.03);
+}
+
+.track-lane-label {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.06);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  pointer-events: none;
+  user-select: none;
 }
 
 /* --- Clip Blocks --- */
@@ -150,23 +172,25 @@
   position: absolute;
   border-radius: var(--radius-sm);
   background: var(--clip-color, var(--color-accent));
-  opacity: 0.85;
+  opacity: 0.88;
   cursor: grab;
   overflow: hidden;
   border: 1px solid transparent;
   transition: opacity var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast);
   z-index: 2;
+  min-width: 4px;
 }
 
 .clip-block:hover {
   opacity: 1;
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .clip-block.selected {
   opacity: 1;
-  border-color: rgba(255, 255, 255, 0.6);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3), var(--shadow-md);
+  border-color: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.2), 0 4px 12px rgba(0, 0, 0, 0.4);
   z-index: 3;
 }
 
@@ -174,24 +198,48 @@
   cursor: grabbing;
 }
 
+/* Clip inner content */
 .clip-content {
   display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  padding: 0 var(--space-sm);
-  height: 100%;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 4px 10px 0 10px;
+  height: auto;
   pointer-events: none;
+  position: relative;
+  z-index: 2;
+}
+
+.clip-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1;
 }
 
 .clip-label {
-  font-size: var(--font-size-xs);
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.9);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  line-height: 1.2;
+}
+
+.clip-duration {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 400;
+}
+
+.clip-badges {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
 }
 
 .clip-badge {
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
   padding: 1px 4px;
   border-radius: var(--radius-sm);
@@ -200,29 +248,67 @@
 }
 
 .muted-badge {
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.5);
   color: var(--color-warning);
 }
 
 .filter-badge {
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.5);
   color: var(--color-info);
+}
+
+/* --- Audio Waveform Visualization --- */
+.clip-audio-wave {
+  position: absolute;
+  bottom: 2px;
+  left: 10px;
+  right: 10px;
+  height: 22px;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  pointer-events: none;
+  opacity: 0.3;
+  z-index: 1;
+}
+
+.wave-bar {
+  flex: 1;
+  min-width: 2px;
+  max-width: 6px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 1px 1px 0 0;
+  transition: opacity var(--transition-fast);
+}
+
+.clip-block:hover .clip-audio-wave {
+  opacity: 0.5;
+}
+
+.clip-block.selected .clip-audio-wave {
+  opacity: 0.6;
 }
 
 /* --- Trim Handles --- */
 .trim-handle {
   position: absolute;
   top: 0;
-  width: 6px;
+  width: 12px;
   height: 100%;
   cursor: col-resize;
   z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: background var(--transition-fast);
 }
 
-.trim-handle:hover,
+.trim-handle:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
 .trim-handle:active {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.25);
 }
 
 .trim-handle-left {
@@ -233,6 +319,19 @@
 .trim-handle-right {
   right: 0;
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.trim-handle-grip {
+  width: 2px;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 1px;
+  transition: background var(--transition-fast);
+}
+
+.trim-handle:hover .trim-handle-grip {
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.3);
 }
 
 /* --- Playhead --- */
@@ -269,10 +368,13 @@
 /* --- CDK Drag Overrides --- */
 .cdk-drag-preview {
   opacity: 0.8;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
 }
 
 .cdk-drag-placeholder {
-  opacity: 0.3;
+  opacity: 0.2;
+  border: 2px dashed rgba(255, 255, 255, 0.3);
+  background: transparent !important;
 }
 
 .cdk-drag-animating {

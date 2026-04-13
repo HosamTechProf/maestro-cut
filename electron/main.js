@@ -480,9 +480,52 @@ app.whenReady().then(() => {
       return new Response('File not found', { status: 404 });
     }
 
-    // Stream the file using Electron's net module (handles range requests)
-    return net.fetch(url.pathToFileURL(filePath).toString());
+    // -----------------------------------------------------------------
+    // Range Request Handling for Video Seeking
+    // -----------------------------------------------------------------
+    const stat = fs.statSync(filePath);
+    const fileSize = stat.size;
+    const rangeHeader = request.headers.get('Range') || request.headers.get('range');
+
+    if (rangeHeader) {
+      const parts = rangeHeader.replace(/bytes=/, '').split('-');
+      const start = parseInt(parts[0], 10);
+      const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+      const chunksize = (end - start) + 1;
+
+      const fileStream = fs.createReadStream(filePath, { start, end });
+      return new Response(fileStream, {
+        status: 206,
+        statusText: 'Partial Content',
+        headers: {
+          'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+          'Accept-Ranges': 'bytes',
+          'Content-Length': chunksize.toString(),
+          'Content-Type': getMimeType(ext),
+        },
+      });
+    }
+
+    // No range requested (e.g. initial load or image)
+    const fileStream = fs.createReadStream(filePath);
+    return new Response(fileStream, {
+      status: 200,
+      headers: {
+        'Content-Length': fileSize.toString(),
+        'Accept-Ranges': 'bytes',
+        'Content-Type': getMimeType(ext),
+      },
+    });
   });
+
+  // Helper inside app.whenReady
+  function getMimeType(ext) {
+    const map = {
+      '.mp4': 'video/mp4', '.mov': 'video/quicktime', '.webm': 'video/webm',
+      '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.png': 'image/png', '.jpg': 'image/jpeg'
+    };
+    return map[ext] || 'application/octet-stream';
+  }
 
   registerIpcHandlers();
   buildMenu();

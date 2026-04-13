@@ -10,7 +10,7 @@ import { Component, inject, computed, viewChild, ElementRef, effect, OnDestroy, 
 import { ProjectStateService } from '../../core/services/project-state.service';
 import { PlaybackService } from '../../core/services/playback.service';
 import { TimeFormatPipe } from '../../shared/pipes/time-format.pipe';
-import { ClipFilter, Clip, getClipEndTime } from '../../core/models/clip.model';
+import { ClipFilter, Clip, getClipEndTime, getClipEffectiveDuration } from '../../core/models/clip.model';
 
 @Component({
   selector: 'app-video-preview',
@@ -50,15 +50,17 @@ export class VideoPreviewComponent implements OnDestroy {
 
   private loadedSrc = '';
   private loadedClipId = '';
+  private loadedClipFingerprint = '';
   private rAFId: number | null = null;
   private frameCount = 0;
   private fpsTimestamp = 0;
-  private isPlaying = false; // Local flag — NOT a signal, not used by effects
+  private isPlaying = false;
+  /** Pending seek target — set when source needs loading before seek. */
+  private pendingSeek: number | null = null;
 
   constructor() {
     // -----------------------------------------------------------------
     // EFFECT: Respond to isPlaying changes + scrub when paused
-    // This is the ONLY effect — keeps things simple and predictable
     // -----------------------------------------------------------------
     effect(() => {
       const playState = this.stateService.isPlaying();
@@ -74,15 +76,14 @@ export class VideoPreviewComponent implements OnDestroy {
       } else if (!playState && this.isPlaying) {
         // === TRANSITION: playing → paused ===
         this.doPause(video);
-        // After pausing, seek to exact current frame
         if (clip) {
-          video.currentTime = this.mapTimelineToSource(currentTime, clip);
+          this.safeSeek(video, this.mapTimelineToSource(currentTime, clip));
         }
       } else if (!playState && !this.isPlaying) {
         // === PAUSED: scrub — seek video to match timeline ===
         this.doScrub(video, clip, currentTime);
       }
-      // If playState && this.isPlaying → playing, do nothing (rAF handles it)
+      // If playState && this.isPlaying → playing, rAF handles it
     });
   }
 
@@ -94,9 +95,6 @@ export class VideoPreviewComponent implements OnDestroy {
   // State Transitions
   // =========================================================================
 
-  /**
-   * Start playback: seek to correct position, play video, start rAF.
-   */
   private doPlay(video: HTMLVideoElement, clip: Clip | null, currentTime: number): void {
     if (!clip) {
       this.playbackService.pause();
@@ -105,29 +103,40 @@ export class VideoPreviewComponent implements OnDestroy {
 
     this.isPlaying = true;
 
-    // Ensure source is loaded
-    this.ensureSource(video, clip);
-
-    // Seek to correct position
     const sourceTime = this.mapTimelineToSource(currentTime, clip);
-    video.currentTime = sourceTime;
+    const needsLoad = this.ensureSource(video, clip);
 
     // Set properties
     video.volume = clip.isMuted ? 0 : clip.volume;
     video.playbackRate = clip.playbackRate;
 
-    // Play
+    if (needsLoad) {
+      // Source was changed — wait for metadata before seeking + playing
+      this.pendingSeek = sourceTime;
+      const onReady = () => {
+        video.removeEventListener('loadeddata', onReady);
+        if (!this.isPlaying) return;
+        video.currentTime = this.pendingSeek ?? sourceTime;
+        this.pendingSeek = null;
+        this.startPlayback(video);
+      };
+      video.addEventListener('loadeddata', onReady);
+    } else {
+      // Source already loaded — seek and play immediately
+      video.currentTime = sourceTime;
+      this.startPlayback(video);
+    }
+  }
+
+  /** Actually start video playback and the rAF loop. */
+  private startPlayback(video: HTMLVideoElement): void {
     video.play().then(() => {
       this.frameCount = 0;
       this.fpsTimestamp = performance.now();
       this.runPlaybackLoop();
     }).catch((err) => {
-      if (err.name === 'AbortError') {
-        // Expected if video.pause() is called before play() finishes. Safe to ignore.
-        return;
-      }
+      if (err.name === 'AbortError') return;
       console.warn('[Preview] Play failed:', err.message);
-      // Only reset if we haven't already moved on to another playback request
       if (this.isPlaying) {
         this.isPlaying = false;
         this.ngZone.run(() => this.playbackService.pause());
@@ -135,11 +144,9 @@ export class VideoPreviewComponent implements OnDestroy {
     });
   }
 
-  /**
-   * Pause: stop video and rAF loop.
-   */
   private doPause(video: HTMLVideoElement | undefined | null): void {
     this.isPlaying = false;
+    this.pendingSeek = null;
 
     if (this.rAFId !== null) {
       cancelAnimationFrame(this.rAFId);
@@ -151,37 +158,27 @@ export class VideoPreviewComponent implements OnDestroy {
     }
   }
 
-  /**
-   * Scrub: seek video to match timeline position (called when paused).
-   */
   private doScrub(video: HTMLVideoElement, clip: Clip | null, currentTime: number): void {
     if (!clip) {
-      // No clip at this time — try to find ANY clip to show its nearest frame
       const allClips = this.stateService.clips();
       if (allClips.length > 0) {
-        // Find the closest clip
         const nearest = this.findNearestClip(currentTime);
         if (nearest) {
           this.ensureSource(video, nearest);
-          // Show the nearest edge frame
           if (currentTime < nearest.startTime) {
-            video.currentTime = nearest.inPoint;
+            this.safeSeek(video, nearest.inPoint);
           } else {
-            video.currentTime = nearest.outPoint - 0.01;
+            this.safeSeek(video, nearest.outPoint - 0.01);
           }
         }
       }
       return;
     }
 
-    // Ensure source is loaded
     this.ensureSource(video, clip);
-
-    // Seek video to match timeline
     const sourceTime = this.mapTimelineToSource(currentTime, clip);
-    video.currentTime = sourceTime;
+    this.safeSeek(video, sourceTime);
 
-    // Update properties
     video.volume = clip.isMuted ? 0 : clip.volume;
     video.playbackRate = clip.playbackRate;
   }
@@ -196,17 +193,13 @@ export class VideoPreviewComponent implements OnDestroy {
 
       const video = this.videoElement()?.nativeElement;
       if (!video || video.paused || video.ended) {
-        // Video stopped — end playback
         this.isPlaying = false;
         this.rAFId = null;
 
         if (video?.ended && this.playbackService.loopEnabled()) {
-          // Loop: restart from beginning
           this.ngZone.run(() => {
             this.stateService.setCurrentTime(0);
-            // play() will be triggered by the effect detecting isPlaying change
-            // But we need to actually restart, so set a small delay
-            setTimeout(() => this.playbackService.play(), 10);
+            setTimeout(() => this.playbackService.play(), 16);
           });
         } else {
           this.ngZone.run(() => this.playbackService.pause());
@@ -227,7 +220,6 @@ export class VideoPreviewComponent implements OnDestroy {
       if (clip) {
         const timelineTime = this.mapSourceToTimeline(video.currentTime, clip);
 
-        // Check if we're past the clip boundary
         if (video.currentTime >= clip.outPoint - 0.05) {
           const nextClip = this.findNextClip(clip);
           if (nextClip) {
@@ -235,7 +227,6 @@ export class VideoPreviewComponent implements OnDestroy {
             video.currentTime = nextClip.inPoint;
             this.ngZone.run(() => this.stateService.setCurrentTime(nextClip.startTime));
           } else if (this.playbackService.loopEnabled()) {
-            // No more clips → loop to start
             const firstClip = this.stateService.clips()[0];
             if (firstClip) {
               this.ensureSource(video, firstClip);
@@ -243,19 +234,16 @@ export class VideoPreviewComponent implements OnDestroy {
               this.ngZone.run(() => this.stateService.setCurrentTime(0));
             }
           } else {
-            // No loop → stop
             this.isPlaying = false;
             this.rAFId = null;
             this.ngZone.run(() => this.playbackService.pause());
             return;
           }
         } else {
-          // Normal frame — update timeline position from video
           this.ngZone.run(() => this.stateService.setCurrentTime(timelineTime));
         }
       }
 
-      // Continue
       if (this.isPlaying) {
         this.runPlaybackLoop();
       }
@@ -266,13 +254,45 @@ export class VideoPreviewComponent implements OnDestroy {
   // Helpers
   // =========================================================================
 
-  /** Ensure the video element has the correct source loaded. */
-  private ensureSource(video: HTMLVideoElement, clip: Clip): void {
-    if (clip.fileUrl && (this.loadedSrc !== clip.fileUrl || this.loadedClipId !== clip.id)) {
+  /**
+   * Ensure the video element has the correct source loaded.
+   * Returns TRUE if a new source was loaded (async, need to wait for loadeddata).
+   */
+  private ensureSource(video: HTMLVideoElement, clip: Clip): boolean {
+    const fingerprint = `${clip.id}:${clip.inPoint}:${clip.outPoint}`;
+
+    if (clip.fileUrl && this.loadedSrc !== clip.fileUrl) {
       this.loadedSrc = clip.fileUrl;
       this.loadedClipId = clip.id;
+      this.loadedClipFingerprint = fingerprint;
       video.src = clip.fileUrl;
       video.load();
+      return true; // Needs async wait
+    }
+
+    if (this.loadedClipFingerprint !== fingerprint) {
+      this.loadedClipId = clip.id;
+      this.loadedClipFingerprint = fingerprint;
+    }
+
+    return false; // Already loaded
+  }
+
+  /**
+   * Safely seek the video — only if the video has enough data.
+   * If not ready, defers the seek to the loadeddata event.
+   */
+  private safeSeek(video: HTMLVideoElement, time: number): void {
+    if (video.readyState >= 1) {
+      // HAVE_METADATA or better — safe to seek
+      video.currentTime = time;
+    } else {
+      // Not ready yet — defer
+      const onReady = () => {
+        video.removeEventListener('loadeddata', onReady);
+        video.currentTime = time;
+      };
+      video.addEventListener('loadeddata', onReady);
     }
   }
 

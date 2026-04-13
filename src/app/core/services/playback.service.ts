@@ -25,8 +25,9 @@ export class PlaybackService {
     const totalDuration = this.stateService.totalDuration();
     if (totalDuration <= 0) return;
 
-    // If at the end, restart from beginning
-    if (this.stateService.currentTime() >= totalDuration - 0.05) {
+    // Only restart from beginning if truly AT the very end
+    const currentTime = this.stateService.currentTime();
+    if (currentTime >= totalDuration - 0.01) {
       this.stateService.setCurrentTime(0);
     }
 
