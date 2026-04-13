@@ -1,8 +1,16 @@
 # MaestroCut
 
-A Desktop Non-Linear Video Editor with an integrated AI Copilot. Built with **Angular 21**, **Electron 41**, **FFmpeg**, and **Google Gemini AI**.
+<p align="center">
+  <img src="./public/logo.png" alt="MaestroCut Logo" width="150" />
+</p>
 
-Users can manually trim, filter, and edit videos via a drag-and-drop timeline, or use the AI chat prompt to manipulate the timeline via natural language (e.g., *"Trim the first 5 seconds and mute the audio"*).
+A Desktop Non-Linear Video Editor with an integrated AI Copilot. Built with **Angular 21**, **Electron 41**, **FFmpeg**, and the **Vercel AI SDK**.
+
+<p align="center">
+  <img src="./public/screenshot.png" alt="MaestroCut Interface" width="800" />
+</p>
+
+Users can manually trim, filter, and edit videos via a drag-and-drop timeline, or use the interactive AI chat prompt to manipulate the timeline via natural language (e.g., *"Trim the first 5 seconds and mute the audio"*).
 
 > **Design philosophy**: The UI "fakes" all edits during preview using HTML5 video manipulation (CSS filters, `currentTime` seeking). Actual video rendering is deferred to FFmpeg, which only runs when the user clicks **Export**.
 
@@ -236,7 +244,7 @@ video-editor/
 │   ├── ffmpeg-engine.js       # Export pipeline (trim → concat → encode)
 │   ├── filter-builder.js      # NLE filters → FFmpeg filtergraph
 │   ├── input-sanitizer.js     # Security: validates all FFmpeg inputs
-│   └── gemini-proxy.js        # Gemini AI SDK proxy (API key never in renderer)
+│   └── gemini-proxy.js        # Vercel AI SDK wrapper with Zod schema
 │
 ├── src/
 │   ├── app/
@@ -323,10 +331,11 @@ The AI prompt bar at the bottom of the editor accepts natural language commands:
 | *"Set volume to 50%"* | Sets volume to 0.5 |
 
 ### How it works
-1. Your prompt + current timeline state (clips, tracks, filters) are sent to Gemini
-2. Gemini returns structured JSON commands
-3. Commands are converted to `EditCommand` instances
-4. All commands execute as a single **undoable batch** (Ctrl+Z to revert)
+1. Your prompt + current timeline state (clips, tracks, filters) are sent to the Vercel AI SDK running on the backend.
+2. The SDK routes the request to Google Gemini with a strict **Zod** schema.
+3. It returns perfectly structured JSON commands, parsing out hallucinations.
+4. Commands execute as a single **undoable batch** (Ctrl+Z to revert).
+5. The UI automatically highlights the affected clips and displays an interactive confirmation card mapping the actions taken.
 
 > The API key stays in the Electron main process and never reaches the browser renderer.
 
